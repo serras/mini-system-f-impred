@@ -19,3 +19,8 @@ import xs2 :: 'List (({c} c -> c) -> 'Int);
 import tres :: 'Int;
 
 i = f2 xs2 (\y -> y tres);
+
+t1 :: ({a} a -> a) -> 'Int
+  = \go -> f2 xs2 (\y -> y (go tres));
+
+t2 = \go -> f2 xs2 (\y -> y (go tres));

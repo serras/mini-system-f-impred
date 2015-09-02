@@ -6,16 +6,23 @@ import Data.List (partition)
 import Unbound.Generics.LocallyNameless
 
 import Syntax
+import Solver
 
 import Debug.Trace
 
 type Env = [(Var, Ty)]
 
-reconstructProgram :: Program -> ([Decl], [(Decl, ConstraintSet)])
+reconstructProgram :: Program -> [[Decl]]
 reconstructProgram decls
   = let (imports, rest) = partition isImport decls
         env = map (\(Import v t) -> (v, t)) imports
-     in (imports, flip runReader env $ runFreshMT (mapM reconstructDecl rest))
+     in map (infiniteDecls env) rest
+
+infiniteDecls :: Env -> Decl -> [Decl]
+infiniteDecls env decl
+  = let (decl', cs) = flip runReader env $ runFreshMT $ reconstructDecl decl
+        decl'' = solve' decl' cs
+     in decl : infiniteDecls env decl''
 
 reconstructDecl :: (MonadReader Env m, Fresh m)
                => Decl -> m (Decl, ConstraintSet)

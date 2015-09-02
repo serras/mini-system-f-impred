@@ -70,6 +70,9 @@ prettyDecl (Typed v t e)
   = do pt <- prettyTy t
        pe <- prettyExpr e
        return $ show v ++ " :: " ++ pt ++ "\n= " ++ pe
+prettyDecl (Untyped v e)
+  = do pe <- prettyExpr e
+       return $ show v ++ " = " ++ pe
 
 mparens :: String -> String
 mparens s | ' ' `elem` s = "(" ++ s ++ ")"
