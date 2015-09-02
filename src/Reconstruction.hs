@@ -23,7 +23,7 @@ reconstructDecl (Typed v ty e)
 reconstructDecl (Untyped v e)
   = do ty <- TyVar <$> fresh (s2n "ty")
        (e', cs) <- reconstruct e ty
-       return (Untyped v e', cs)
+       return (Typed v ty e', cs)
 reconstructDecl (Import _ _)
   = error "Imports should not be here!"
 
@@ -39,7 +39,8 @@ reconstruct e ty
          Nothing            -> doRest e ty
 
 doUp :: Ty -> Ty -> ConstraintSet -> ConstraintSet
-doUp _   (TyVar _)       cs = cs
+-- doUp _   (TyVar _)       cs = cs
+doUp tau ups@(TyVar _)   cs = (tau, ups) : cs
 doUp tau psi@(TyCon _ _) cs = (tau, psi) : cs
 doUp _   (TyForAll _)    _  = error "This should never happen!"
 

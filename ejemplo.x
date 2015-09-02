@@ -13,3 +13,7 @@ g = f xs (\x -> x);
 import app :: {a} {b} (a -> b) -> a -> b;
 
 h = app f xs;
+
+import ys :: 'List ({b} ('List ({a} a -> a)) -> b -> b);
+
+i = f ys (\x -> f x (\y -> y));
