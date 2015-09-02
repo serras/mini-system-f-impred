@@ -7,13 +7,15 @@ import Unbound.Generics.LocallyNameless
 
 import Syntax
 
+import Debug.Trace
+
 type Env = [(Var, Ty)]
 
-reconstructProgram :: Program -> [(Decl, ConstraintSet)]
+reconstructProgram :: Program -> ([Decl], [(Decl, ConstraintSet)])
 reconstructProgram decls
   = let (imports, rest) = partition isImport decls
         env = map (\(Import v t) -> (v, t)) imports
-     in flip runReader env $ runFreshMT (mapM reconstructDecl rest)
+     in (imports, flip runReader env $ runFreshMT (mapM reconstructDecl rest))
 
 reconstructDecl :: (MonadReader Env m, Fresh m)
                => Decl -> m (Decl, ConstraintSet)
@@ -95,12 +97,25 @@ reconstructUp e@(App _ _) | (h, args) <- apps e
        case maybeH of
          Just (h', hTy, hCs) -> Just <$> upPhase2 h' args hTy hCs
          Nothing -> return Nothing
+reconstructUp e@(AppTy _ _) | (h, args) <- tyapps e
+  = do maybeH <- reconstructUp h
+       case maybeH of
+         Just (h', hTy, hCs) -> do
+           let (_, hArgs) = tyapps h'  -- Get the new ty vars
+               s = zipWith (\(TyVar v) a -> (v, a)) hArgs args
+           return $ Just (substs s h', substs s hTy, substs s hCs)
+         o -> trace (show o ++ "\n" ++ show h) $ return Nothing
 reconstructUp _ = return Nothing
 
 apps :: Expr -> (Expr, [Expr])
 apps (App e1 e2) = let (h, r) = apps e1
                     in (h, r ++ [e2])
 apps h           = (h, [])
+
+tyapps :: Expr -> (Expr, [Ty])
+tyapps (AppTy e t) = let (h, r) = tyapps e
+                      in (h, r ++ [t])
+tyapps h           = (h, [])
 
 instantiate :: Fresh m
             => Expr -> Ty -> m (Expr, Ty)
@@ -118,5 +133,9 @@ upPhase2 e (a:as) (TyArrow s r) cs = do
 upPhase2 e as    f@(TyForAll _) cs = do
   (e', ty') <- instantiate e f
   upPhase2 e' as ty' cs
-upPhase2 _ _ (TyVar _)   _ = error "Does this happen at all?"
+upPhase2 e (a:as) (TyVar _) cs = do
+  alpha <- TyVar <$> fresh (s2n "a")
+  beta <- TyVar <$> fresh (s2n "b")
+  (a', aCs) <- reconstruct a alpha
+  upPhase2 (App e a') as beta (cs ++ aCs)
 upPhase2 _ _ (TyCon _ _) _ = error "Application without a function!"

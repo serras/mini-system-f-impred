@@ -14,6 +14,8 @@ import app :: {a} {b} (a -> b) -> a -> b;
 
 h = app f xs;
 
-import ys :: 'List ({b} ('List ({a} a -> a)) -> b -> b);
+import f2 :: {b} ('List b) -> b -> Int;
+import xs2 :: 'List (({c} c -> c) -> 'Int);
+import tres :: 'Int;
 
-i = f ys (\x -> f x (\y -> y));
+i = f2 xs2 (\y -> y tres);
